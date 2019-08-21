@@ -20,6 +20,9 @@ A simple Javascript Plugin for Tinder-like Swipeing
 				})
         
 swipeLeft & swipeRight functions can be used with an Ajax Request.
+within those functions if you call:
+resolve() -> The Element will be destroied from DOM
+reject() -> The Element thrown back
 
 Have fun! 
 
