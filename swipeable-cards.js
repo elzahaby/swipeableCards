@@ -16,14 +16,13 @@
 	var defaults = {
 		resizeLog: 'The window was resized!',
 		isHeld: false,
-		swipeRight: function () { return false },
-		swipeRightPromise: function() { return new Promise(function (resolve, reject) { settings.swipeRight(resolve,reject)})},
-		swipeLeft: function (resolve, reject) { reject() },
-		swipeLeftPromise: function() { return new Promise(function (resolve, reject) { settings.swipeLeft(resolve,reject)})},
+		swipeRight: function (element, resolve, reject) { reject() },
+		swipeRightPromise: function() { return new Promise(function (resolve, reject) { settings.swipeRight(swipeableCards.element, resolve,reject)})},
+		swipeLeft: function (element, resolve, reject) { reject() },
+		swipeLeftPromise: function() { return new Promise(function (resolve, reject) { settings.swipeLeft(swipeableCards.element, resolve,reject)})},
 		swipeTop: function () { return false },
 		swipeBottom: function () { return false }
 	};
-
 
 	//
 	// Methods
@@ -67,9 +66,10 @@
 		if ( toggle && toggle.hasAttribute( 'data-swipeable' ) ) {
 			console.log("swipe")
 			// Prevent default click event
+			/*
 			if ( toggle.tagName.toLowerCase() === 'a') {
 				event.preventDefault();
-			}
+			}*/
 
 			// Set the [data-click-me] value as a class on the link
 			toggle.classList.add( toggle.getAttribute( 'data-swipeable' ) );
@@ -83,64 +83,71 @@
 	 * @private
 	 */
 	var eventHandler = function (event) {
-		//event.preventDefault()
-		//addListenerMulti(event.target,"mousemove touchmove mouseup touchend", elementMove(event, el));
-		if ( event.type === 'touchstart' || event.type === 'mousedown' ) {
-			swipeableCards.element = this;
-			swipeableCards.isHeld = true;
-            swipeableCards.touchStartX = event.pageX || event.touches[0].pageX;
-            swipeableCards.touchStartY = event.pageY || event.touches[0].pageY;
-			addListenerMulti(event.target,"mousemove touchmove", elementMove);
-		}
-		if ( event.type === 'touchend' || event.type === 'mouseup' ) {
-            //swipeableCards.touchEndX = event.changedTouches[0].screenX;
-           // swipeableCards.touchEndY = event.changedTouches[0].screenY;
-			//callback
-			swipeableCards.isHeld = false;
-			swipeableCards.animating = false;
-			
-			if (swipeableCards.pullDeltaX >= 100) {
-				swipeableCards.interval = setInterval(animate, 10);
-				swipeableCards.direction = "swipeRight"
-			} else if (swipeableCards.pullDeltaX <= -100) {
-				swipeableCards.interval = setInterval(animate, 10);
-				swipeableCards.direction = "swipeLeft"
-			} else if (swipeableCards.pullDeltaY >= 150) {
-				if(settings.swipeTop()) {
-					//TODO throw out
-				} else {
-					swipeableCards.pullDeltaX = 0;
-					swipeableCards.pullDeltaY = 0;
-					swipeableCards.element.style.transform = "initial";
-				}
-			} else if (swipeableCards.pullDeltaY <= -150) {
-				if(settings.swipeTop()) {
-					//TODO throw out
-				} else {
-					swipeableCards.pullDeltaX = 0;
-					swipeableCards.pullDeltaY = 0;
-					swipeableCards.element.style.transform = "initial";
-				}
-			} else { 
-				swipeableCards.pullDeltaX = 0;
-				swipeableCards.pullDeltaY = 0;
-				swipeableCards.element.style.transform = "initial";
-				swipeableCards.element = null;
+		var swipeableElement = findParent(event.target,'.swipeable');
+		if(event.target && swipeableElement && !swipeableElement.classList.contains('card-opened') && !swipeableElement.classList.contains('card-opening') && !swipeableElement.classList.contains('card-closing')) {
+			if ( event.type === 'touchstart' || event.type === 'mousedown' ) {
+				swipeableCards.element = swipeableElement;
+				swipeableCards.isHeld = true;
+				swipeableCards.touchStartX = event.pageX || event.touches[0].pageX;
+				swipeableCards.touchStartY = event.pageY || event.touches[0].pageY;
+				addListenerMulti(event.target,"mousemove touchmove", elementMove);
 			}
-			removeListenerMulti(event.target,"mousemove touchmove", elementMove);
+			if ( event.type === 'touchend' || event.type === 'mouseup' ) {
+				swipeableCards.isHeld = false;
+				swipeableCards.animating = false;
+				
+				if (swipeableCards.pullDeltaX >= 100) {
+					event.preventDefault()
+					swipeableCards.interval = setInterval(animate, 10);
+					swipeableCards.direction = "swipeRight"
+				} else if (swipeableCards.pullDeltaX <= -100) {
+					event.preventDefault()
+					swipeableCards.interval = setInterval(animate, 10);
+					swipeableCards.direction = "swipeLeft"
+				} else if (swipeableCards.pullDeltaY >= 150) {
+					event.preventDefault()
+					if(settings.swipeTop()) {
+						//TODO throw out
+					} else {
+						swipeableCards.pullDeltaX = 0;
+						swipeableCards.pullDeltaY = 0;
+						swipeableCards.element.style.transform = "initial";
+						swipeableCards.element.style.transition = "all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+					}
+				} else if (swipeableCards.pullDeltaY <= -150) {
+					event.preventDefault()
+					if(settings.swipeTop()) {
+						//TODO throw out
+					} else {
+						swipeableCards.pullDeltaX = 0;
+						swipeableCards.pullDeltaY = 0;
+						swipeableCards.element.style.transform = "initial";
+						swipeableCards.element.style.transition = "all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+					}
+				} else { 
+					swipeableCards.pullDeltaX = 0;
+					swipeableCards.pullDeltaY = 0;
+					swipeableCards.element.style.transform = "initial";
+                    swipeableCards.element.style.transition = "all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+					swipeableCards.element = null;
+				}
+				removeListenerMulti(event.target,"mousemove touchmove", elementMove);
+			}
+			/* On resize
+			if ( event.type === 'resize' ) {
+				console.log( settings.resizeLog );
+			}*/
+			//event.stopImmediatePropagation();
 		}
-		/* On resize
-		if ( event.type === 'resize' ) {
-			console.log( settings.resizeLog );
-		}*/
-		//event.stopImmediatePropagation();
 	};
 	
 	var elementMove = function (event) {
 		//event.preventDefault()
 		if(swipeableCards.isHeld) {
-			event.preventDefault();
-			event.stopImmediatePropagation();
+            if(event.cancelable) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
 			if(event.type === "mousemove" || event.type === "touchmove") {
 				var x = event.pageX || event.touches[0].pageX;
 				var y = event.pageY || event.touches[0].pageY;
@@ -155,7 +162,8 @@
 				else
 				  swipeableCards.deg = -10*multiplier;
 			  
-				swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 0) rotate("+swipeableCards.deg+"deg)";
+				swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 1px) rotate("+swipeableCards.deg+"deg)";
+                swipeableCards.element.style.transition = "all 0 ease";
 			}
 		} else {
 			//removeListenerMulti(event.target,"mousemove touchmove mouseup touchend", elementMove);
@@ -171,19 +179,24 @@
 		s.split(' ').forEach(e => el.removeEventListener(e, fn, false));
 	}
 	
+	function findParent (el, sel) {
+		while ((el = el.parentElement) && !((el.matches || el.matchesSelector).call(el,sel)));
+		return el;
+	}
+	
 	var animate = function () {
 		//console.log(isInViewport(element));
 		if(!isInViewport(swipeableCards.element)){
 			clearInterval(swipeableCards.interval);
 			swipeableCards.animating = false;
 			//console.log(swipeableCards.direction);
+            swipeableCards.pullDeltaX = 0;
+            swipeableCards.pullDeltaY = 0;
 			settings[swipeableCards.direction+'Promise']().then(function() {
-				console.log("handle");
+				swipeableCards.element.parentNode.removeChild(swipeableCards.element);
 			}).catch(function() {
-				console.log("return");
-				swipeableCards.pullDeltaX = 0;
-				swipeableCards.pullDeltaY = 0;
-				swipeableCards.element.style.transform = "initial";
+                swipeableCards.element.style.transform = "initial";
+				swipeableCards.element.style.transition = "all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
 			});
 		} else {
 			swipeableCards.animating = true;
@@ -194,8 +207,9 @@
 			  swipeableCards.deg = 10*multiplier;
 			else
 			  swipeableCards.deg = -10*multiplier;
-			swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 0) rotate("+swipeableCards.deg+"deg)";
-		}
+            swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 0) rotate("+swipeableCards.deg+"deg)";
+            swipeableCards.element.style.transition = "all 0 ease";
+        }
 	}
 	
 	var isInViewport = function (elem) {
@@ -235,6 +249,20 @@
 	};
 
 	/**
+	 * SwipeRight
+	 * @public
+	 * @param {Object} options User settings
+	 */
+	swipeableCards.swipeRight = function(element) {
+        /*
+        swipeableCards.element = element;
+        swipeableCards.interval = setInterval(animate, 10);
+        swipeableCards.direction = "swipeRight"
+        */
+        return new Promise(function (resolve, reject) { settings.swipeRight(element, resolve,reject)})
+    };
+    
+	/**
 	 * Initialize Plugin
 	 * @public
 	 * @param {Object} options User settings
@@ -251,13 +279,13 @@
 		settings = extend( defaults, options || {} );
 
 		// Listen for click events
-		var el = document.querySelectorAll('[data-swipeable]')
-		for (var el of el) {
+		//var el = document.querySelectorAll('[data-swipeable]')
+		//for (var el of el) {
 			// mousemove touchmove mouseup touchend
-			addListenerMulti(el,'mousedown touchstart mouseup touchend', eventHandler);
-		}
+			addListenerMulti(document,'mousedown touchstart mouseup touchend', eventHandler);
+		//}
 		//window.addEventListener('resize', eventHandler, false);
-
+        return swipeableCards;
 	};
 
 
