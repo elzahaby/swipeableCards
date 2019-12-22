@@ -9,11 +9,11 @@ A simple Javascript Plugin for Tinder-like Swipeing
 2. Initiate the plugin:
 
 				swipeableCards.init({
-					swipeLeft: function(resolve,reject) {
+					swipeLeft: function(element, resolve,reject) {
 						console.log("left");
 						reject();
 					},
-					swipeRight: function (resolve,reject) {
+					swipeRight: function (element, resolve,reject) {
 						console.log("right");
 						reject();
 					}
