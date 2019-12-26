@@ -1,6 +1,10 @@
 # swipeableCards
 A simple Javascript Plugin for Tinder-like Swipeing
 
+## Screenshot
+
+<a href="https://raw.githubusercontent.com/elzahaby/swipeableCards/master/screens/screen1.gif"><img src="https://raw.githubusercontent.com/elzahaby/swipeableCards/master/screens/screen1.gif" alt="SwipeableCards Screenshot" width="250"></a>
+
 
 ## HOW IT WORKS
 
