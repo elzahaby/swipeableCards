@@ -3,9 +3,8 @@ A simple Javascript Plugin for Tinder-like Swipeing
 
 ## Screenshot
 
-<a href="https://raw.githubusercontent.com/elzahaby/swipeableCards/master/screen.mp4"><video width="320" height="240" controls>
-<source src="https://raw.githubusercontent.com/elzahaby/swipeableCards/master/screen.mp4"  type="video/mp4">
-</video></a>
+<a href="https://raw.githubusercontent.com/elzahaby/swipeableCards/master/screen.gif">
+<img src="https://raw.githubusercontent.com/elzahaby/swipeableCards/master/screen.gif"></a>
 
 
 ## HOW IT WORKS
