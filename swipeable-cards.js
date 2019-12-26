@@ -111,8 +111,12 @@
 					} else {
 						swipeableCards.pullDeltaX = 0;
 						swipeableCards.pullDeltaY = 0;
-						swipeableCards.element.style.transform = "initial";
-						swipeableCards.element.style.transition = "all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                        swipeableCards.element.style.transform = "";
+                        swipeableCards.element.style.transition = "";
+                        var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                        for (var i = 0; i < actionElement.length; ++i) {
+                            actionElement[i].style.opacity = 0;
+                        }
 					}
 				} else if (swipeableCards.pullDeltaY <= -150) {
 					event.preventDefault()
@@ -121,14 +125,24 @@
 					} else {
 						swipeableCards.pullDeltaX = 0;
 						swipeableCards.pullDeltaY = 0;
-						swipeableCards.element.style.transform = "initial";
-						swipeableCards.element.style.transition = "all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                        swipeableCards.element.style.transform = "";
+                        swipeableCards.element.style.transition = "";
+                        var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                        for (var i = 0; i < actionElement.length; ++i) {
+                            actionElement[i].style.opacity = 0;
+                        }
 					}
 				} else { 
 					swipeableCards.pullDeltaX = 0;
 					swipeableCards.pullDeltaY = 0;
-					swipeableCards.element.style.transform = "initial";
-                    swipeableCards.element.style.transition = "all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+					//swipeableCards.element.style.transform = "translate3d(0px, 0px , 0) rotate(0deg)";
+                    //swipeableCards.element.style.transition = "transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                    swipeableCards.element.style.transform = "";
+                    swipeableCards.element.style.transition = "";
+                    var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                    for (var i = 0; i < actionElement.length; ++i) {
+                        actionElement[i].style.opacity = 0;
+                    }
 					swipeableCards.element = null;
 				}
 				removeListenerMulti(event.target,"mousemove touchmove", elementMove);
@@ -157,10 +171,15 @@
 				
 				swipeableCards.animating = true;
 				var multiplier = Math.abs(Math.min(Math.max(Math.abs(swipeableCards.pullDeltaX) / (swipeableCards.element.offsetWidth / 1.5), 0), 1));
-				if(swipeableCards.pullDeltaX >= 0)
-				  swipeableCards.deg = 10*multiplier;
-				else
-				  swipeableCards.deg = -10*multiplier;
+				if(swipeableCards.pullDeltaX >= 0) {
+				    swipeableCards.deg = 10*multiplier;
+                    swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
+                } else {
+                    swipeableCards.deg = -10*multiplier;
+                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+                    swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
+                }
 			  
 				swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 1px) rotate("+swipeableCards.deg+"deg)";
                 swipeableCards.element.style.transition = "all 0 ease";
@@ -195,18 +214,28 @@
 			settings[swipeableCards.direction+'Promise']().then(function() {
 				swipeableCards.element.parentNode.removeChild(swipeableCards.element);
 			}).catch(function() {
-                swipeableCards.element.style.transform = "initial";
-				swipeableCards.element.style.transition = "all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                swipeableCards.element.style.transform = "";
+                swipeableCards.element.style.transition = ""; 
+
+                var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                for (var i = 0; i < actionElement.length; ++i) {
+                    actionElement[i].style.opacity = 0;
+                }
 			});
 		} else {
 			swipeableCards.animating = true;
 			swipeableCards.pullDeltaX = swipeableCards.pullDeltaX * 1.15
 			swipeableCards.pullDeltaY = swipeableCards.pullDeltaY * 1.15
 			var multiplier = Math.abs(Math.min(Math.max(Math.abs(swipeableCards.pullDeltaX) / (swipeableCards.element.offsetWidth / 1.5), 0), 1));
-			if(swipeableCards.pullDeltaX >= 0)
-			  swipeableCards.deg = 10*multiplier;
-			else
-			  swipeableCards.deg = -10*multiplier;
+            if(swipeableCards.pullDeltaX >= 0) {
+                swipeableCards.deg = 10*multiplier;
+                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
+            } else {
+                swipeableCards.deg = -10*multiplier;
+                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+                swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
+            }
             swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 0) rotate("+swipeableCards.deg+"deg)";
             swipeableCards.element.style.transition = "all 0 ease";
         }
