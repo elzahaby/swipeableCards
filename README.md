@@ -7,6 +7,9 @@ A simple Javascript Plugin for Tinder-like Swipeing
 <img src="https://raw.githubusercontent.com/elzahaby/swipeableCards/master/screen.gif"></a>
 
 
+## Live Preview
+<a href="https://htmlpreview.github.io/?https://github.com/elzahaby/swipeableCards/blob/master/preview/index.html">Here</a>
+
 ## HOW IT WORKS
 
 1. Add  data-swipeable="true" to the element you would like to swipe around.
