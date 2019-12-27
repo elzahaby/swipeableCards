@@ -1,0 +1,78 @@
+body {
+    width: 100%;
+    overflow: hidden;
+    height: 100%;
+    margin: 0;
+    font-family: Arial;
+}
+.cardboard {
+    width: 100%;
+    max-width: 375px;
+    margin:auto;
+}
+.cardboard .card {
+    box-shadow: none;
+    transition-property: box-shadow, transform, border-radius;
+    transition-duration: 0.1s;
+    z-index: 0;
+    -webkit-backface-visibility: hidden;
+    position: relative;
+    border-radius: 16px;
+    margin: 20px;
+}
+
+.card .card-content {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.cardboard .card:last-child  {
+    cursor:pointer;
+    box-shadow: 0 2px 6px 0 rgba(112,125,134,0.5);
+    z-index: 10000;
+    transform: translate3d(0,0,0);
+    pointer-events: auto;
+}
+.stretch-card {
+    width:100%;
+    max-width: 375px;
+    padding-bottom: 151.2%;
+    position: relative;
+}
+
+.stretch-card > .card {
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+}
+
+.swipeable-action {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 10;
+    text-transform: uppercase;
+    will-change: opacity;
+    line-height: 1.5rem;
+    font-size: 2rem;
+    font-weight: 600;
+    border-radius: 4px;
+    border-width: 4px;
+    border-style: solid;
+    padding: .2em;
+    top: 10%;
+}
+.swipeable-action.left {
+    color: #ff4848;
+    border-color: #ff4848;
+    -webkit-transform: rotate(20deg);
+    transform: rotate(20deg);
+    right: 10%;
+}
+.swipeable-action.right {
+    color: #01df8a;
+    border-color: #01df8a;
+    -webkit-transform: rotate(-10deg);
+    transform: rotate(-10deg);
+    left: 5%;
+}
