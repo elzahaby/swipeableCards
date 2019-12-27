@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+	<head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui, viewport-fit=cover">
+		<meta charset="utf-8">
+		<title>SwipeableCards</title>
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body class="">
+        <div class="cardboard">
+            <div class="stretch-card">
+                <div class="card swipeable" style="background:green; color:white;">
+                    <div class="card-content">
+                        <h2>Hi there!</h2>
+                        <div class="swipeable-action left">Next ;)</div>
+                        <div class="swipeable-action right">Yippi</div>
+                    </div>
+                </div> 
+                <div class="card swipeable" style="background:red; color:white;">
+                    <div class="card-content">
+                        <h2>Play with me...</h2>
+                        <div class="swipeable-action left">Oh No...</div>
+                        <div class="swipeable-action right">Yeah baby!</div>
+                    </div>
+                </div> 
+            </div>
+        </div>
+		<script type="text/javascript" src="swipeable-cards.js"></script>
+        <script>
+            self.swipeAble = swipeableCards.init({
+                swipeLeft: function(element, resolve, reject) {
+                        reject();
+                },
+                swipeRight: function (element, resolve, reject) {
+                        resolve();
+                }
+            })
+        </script>
+	</body>
+</html>
