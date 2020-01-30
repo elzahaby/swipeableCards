@@ -16,6 +16,9 @@
 	var defaults = {
 		resizeLog: 'The window was resized!',
 		isHeld: false,
+        swiping: false,
+        noSwipingClass: '',
+        threshold: 1,
 		swipeRight: function (element, resolve, reject) { reject() },
 		swipeRightPromise: function() { return new Promise(function (resolve, reject) { settings.swipeRight(swipeableCards.element, resolve,reject)})},
 		swipeLeft: function (element, resolve, reject) { reject() },
@@ -82,120 +85,123 @@
 	 * Handle events
 	 * @private
 	 */
-	var eventHandler = function (event) {
-		var swipeableElement = findParent(event.target,'.swipeable');
-		if(event.target && swipeableElement && !swipeableElement.classList.contains('card-opened') && !swipeableElement.classList.contains('card-opening') && !swipeableElement.classList.contains('card-closing')) {
-			if ( event.type === 'touchstart' || event.type === 'mousedown' ) {
-				swipeableCards.element = swipeableElement;
-				swipeableCards.isHeld = true;
-				swipeableCards.touchStartX = event.pageX || event.touches[0].pageX;
-				swipeableCards.touchStartY = event.pageY || event.touches[0].pageY;
-				addListenerMulti(event.target,"mousemove touchmove", elementMove);
-			}
-			if ( event.type === 'touchend' || event.type === 'mouseup' ) {
-				swipeableCards.isHeld = false;
-				swipeableCards.animating = false;
-				
-				if (swipeableCards.pullDeltaX >= 100) {
-					event.preventDefault()
-					swipeableCards.interval = setInterval(animate, 10);
-					swipeableCards.direction = "swipeRight"
-				} else if (swipeableCards.pullDeltaX <= -100) {
-					event.preventDefault()
-					swipeableCards.interval = setInterval(animate, 10);
-					swipeableCards.direction = "swipeLeft"
-				} else if (swipeableCards.pullDeltaY >= 150) {
-					event.preventDefault()
-					if(settings.swipeTop()) {
-						//TODO throw out
-					} else {
-						swipeableCards.pullDeltaX = 0;
-						swipeableCards.pullDeltaY = 0;
-                        swipeableCards.element.style.transform = "";
-                        swipeableCards.element.style.transition = "";
-                        var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
-                        for (var i = 0; i < actionElement.length; ++i) {
-                            actionElement[i].style.opacity = 0;
-                        }
-					}
-				} else if (swipeableCards.pullDeltaY <= -150) {
-					event.preventDefault()
-					if(settings.swipeTop()) {
-						//TODO throw out
-					} else {
-						swipeableCards.pullDeltaX = 0;
-						swipeableCards.pullDeltaY = 0;
-                        swipeableCards.element.style.transform = "";
-                        swipeableCards.element.style.transition = "";
-                        var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
-                        for (var i = 0; i < actionElement.length; ++i) {
-                            actionElement[i].style.opacity = 0;
-                        }
-					}
-				} else { 
-					swipeableCards.pullDeltaX = 0;
-					swipeableCards.pullDeltaY = 0;
-					//swipeableCards.element.style.transform = "translate3d(0px, 0px , 0) rotate(0deg)";
-                    //swipeableCards.element.style.transition = "transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-                    swipeableCards.element.style.transform = "";
-                    swipeableCards.element.style.transition = "";
-                    var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
-                    for (var i = 0; i < actionElement.length; ++i) {
-                        actionElement[i].style.opacity = 0;
+    
+    var eventHandler = function (event) {
+        swipeableCards.element = findParent(event.target,'.swipeable');
+        if(event.target && swipeableCards.element) {
+            
+            var ignore = false;
+            if(settings.noSwipingClass) {
+                settings.noSwipingClass.split(' ').forEach(function(value, index) {
+                    if(swipeableCards.element.classList.contains(value)) {
+                        ignore = true;
                     }
-					swipeableCards.element = null;
-				}
-				removeListenerMulti(event.target,"mousemove touchmove", elementMove);
-			}
-			/* On resize
-			if ( event.type === 'resize' ) {
-				console.log( settings.resizeLog );
-			}*/
-			//event.stopImmediatePropagation();
-		}
-	};
-	
-	var elementMove = function (event) {
-		//event.preventDefault()
-		if(swipeableCards.isHeld) {
-            if(event.cancelable) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
+                })
             }
-			if(event.type === "mousemove" || event.type === "touchmove") {
-				var x = event.pageX || event.touches[0].pageX;
-				var y = event.pageY || event.touches[0].pageY;
-				swipeableCards.pullDeltaX = (x - swipeableCards.touchStartX);
-				swipeableCards.pullDeltaY = (y - swipeableCards.touchStartY);
-				if (!swipeableCards.pullDeltaX) return;
-				
-				swipeableCards.animating = true;
-				var multiplier = Math.abs(Math.min(Math.max(Math.abs(swipeableCards.pullDeltaX) / (swipeableCards.element.offsetWidth / 1.5), 0), 1));
-				if(swipeableCards.pullDeltaX >= 0) {
-				    swipeableCards.deg = 10*multiplier;
-                    swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
-                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
-                } else {
-                    swipeableCards.deg = -10*multiplier;
-                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
-                    swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
+            if(ignore) return
+            
+            if ( event.type === 'touchstart' || event.type === 'mousedown' ) {
+                
+                if(swipeableCards.animating) return;
+                
+                swipeableCards.touchStartX = event.pageX || event.touches[0].pageX;
+                swipeableCards.touchStartY = event.pageY || event.touches[0].pageY;
+
+                addListenerMulti(event.target,"mousemove touchmove", elementMove);
+                
+            }
+            if ( event.type === 'touchend' || event.type === 'mouseup' ) {
+                swipeableCards.animating = false;
+                removeListenerMulti(event.target,"mousemove touchmove", elementMove);
+                if (!swipeableCards.pullDeltaX && !swipeableCards.pullDeltaY) return;
+                elementRelease();
+            }
+        }
+    }
+    
+    var elementMove = function (event) {
+        var x = event.pageX || event.touches[0].pageX;
+        var y = event.pageY || event.touches[0].pageY;
+        swipeableCards.pullDeltaX = (x - swipeableCards.touchStartX);
+        swipeableCards.pullDeltaY = (y - swipeableCards.touchStartY);
+        
+        if (!swipeableCards.pullDeltaX && !swipeableCards.pullDeltaY) return;
+        if((Math.abs(swipeableCards.pullDeltaX) < settings.threshold || Math.abs(swipeableCards.pullDeltaY) < settings.threshold) && !swipeableCards.animating) {
+            return
+        }
+        
+        swipeableCards.animating = true;
+        
+        var multiplier = Math.abs(Math.min(Math.max(Math.abs(swipeableCards.pullDeltaX) / (swipeableCards.element.offsetWidth / 1.5), 0), 1));
+        if(swipeableCards.pullDeltaX >= 0) {
+            swipeableCards.deg = 10*multiplier;
+            swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+            swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
+        } else {
+            swipeableCards.deg = -10*multiplier;
+            swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+            swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
+        }
+        
+        swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 1px) rotate("+swipeableCards.deg+"deg)";
+        swipeableCards.element.style.transitionDuration = "0";
+    }
+    
+    var elementRelease = function (event) {
+
+        if (swipeableCards.pullDeltaX >= 100) {
+            swipeableCards.interval = setInterval(animate, 1);
+            swipeableCards.direction = "swipeRight"
+        } else if (swipeableCards.pullDeltaX <= -100) {
+            swipeableCards.interval = setInterval(animate, 1);
+            swipeableCards.direction = "swipeLeft"
+        } else if (swipeableCards.pullDeltaY >= 150) {
+            if(settings.swipeTop()) {
+                //TODO throw out
+            } else {
+                swipeableCards.pullDeltaX = 0;
+                swipeableCards.pullDeltaY = 0;
+                swipeableCards.element.style.transform = "";
+                swipeableCards.element.style.transitionDuration = "";
+                var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                for (var i = 0; i < actionElement.length; ++i) {
+                    actionElement[i].style.opacity = 0;
                 }
-			  
-				swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 1px) rotate("+swipeableCards.deg+"deg)";
-                swipeableCards.element.style.transition = "all 0 ease";
-			}
-		} else {
-			//removeListenerMulti(event.target,"mousemove touchmove mouseup touchend", elementMove);
-		}
-		//event.stopImmediatePropagation();
-	}
+            }
+        } else if (swipeableCards.pullDeltaY <= -150) {
+            if(settings.swipeTop()) {
+                //TODO throw out
+            } else {
+                swipeableCards.pullDeltaX = 0;
+                swipeableCards.pullDeltaY = 0;
+                swipeableCards.element.style.transform = "";
+                swipeableCards.element.style.transitionDuration = "";
+                var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                for (var i = 0; i < actionElement.length; ++i) {
+                    actionElement[i].style.opacity = 0;
+                }
+            }
+        } else { 
+            swipeableCards.pullDeltaX = 0;
+            swipeableCards.pullDeltaY = 0;
+            //swipeableCards.element.style.transform = "translate3d(0px, 0px , 0) rotate(0deg)";
+            //swipeableCards.element.style.transition = "transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+            swipeableCards.element.style.transform = "";
+            swipeableCards.element.style.transitionDuration = "";
+            var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+            for (var i = 0; i < actionElement.length; ++i) {
+                actionElement[i].style.opacity = 0;
+            }
+            swipeableCards.element = null;
+        }
+    }
 	
 	function addListenerMulti(el, s, fn) {
-		s.split(' ').forEach(e => el.addEventListener(e, fn, false));
+		s.split(' ').forEach(e => el.addEventListener(e, fn, true));
 	}
 	
 	function removeListenerMulti(el, s, fn) {
-		s.split(' ').forEach(e => el.removeEventListener(e, fn, false));
+		s.split(' ').forEach(e => el.removeEventListener(e, fn, true));
 	}
 	
 	function findParent (el, sel) {
@@ -237,7 +243,7 @@
                 swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
             }
             swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 0) rotate("+swipeableCards.deg+"deg)";
-            swipeableCards.element.style.transition = "all 0 ease";
+            swipeableCards.element.style.transitionDuration = "0";
         }
 	}
 	
@@ -283,12 +289,17 @@
 	 * @param {Object} options User settings
 	 */
 	swipeableCards.swipeRight = function(element) {
-        /*
         swipeableCards.element = element;
-        swipeableCards.interval = setInterval(animate, 10);
         swipeableCards.direction = "swipeRight"
-        */
-        return new Promise(function (resolve, reject) { settings.swipeRight(element, resolve,reject)})
+        swipeableCards.pullDeltaX = 10;
+        swipeableCards.interval = setInterval(animate, 1);
+    };
+    
+	swipeableCards.swipeLeft = function(element) {
+        swipeableCards.element = element;
+        swipeableCards.direction = "swipeLeft"
+        swipeableCards.pullDeltaX = -10;
+        swipeableCards.interval = setInterval(animate, 1);
     };
     
 	/**
