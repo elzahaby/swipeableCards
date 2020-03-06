@@ -18,7 +18,7 @@
 		isHeld: false,
         swiping: false,
         noSwipingClass: '',
-        threshold: 1,
+        threshold: 0.5,
 		swipeRight: function (element, resolve, reject) { reject() },
 		swipeRightPromise: function() { return new Promise(function (resolve, reject) { settings.swipeRight(swipeableCards.element, resolve,reject)})},
 		swipeLeft: function (element, resolve, reject) { reject() },
@@ -82,8 +82,9 @@
 	};
 
 	/**
-	 * Handle events
+	 * Handle Events
 	 * @private
+     * @param {object} event
 	 */
     
     var eventHandler = function (event) {
@@ -118,6 +119,12 @@
             }
         }
     }
+	
+	/**
+	 * Move Element
+	 * @private
+     * @param {object} event
+	 */
     
     var elementMove = function (event) {
         var x = event.pageX || event.touches[0].pageX;
@@ -146,6 +153,12 @@
         swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 1px) rotate("+swipeableCards.deg+"deg)";
         swipeableCards.element.style.transitionDuration = "0";
     }
+	
+	/**
+	 * Element was Released
+	 * @private
+     * @param {object} event
+	 */
     
     var elementRelease = function (event) {
 
@@ -196,30 +209,63 @@
         }
     }
 	
+	/**
+	 * Add Multiple Event Listners
+	 * @private
+	 * @param {DOMNode} element
+     * @param {String} selector
+     * @param {function} function
+	 */
+    
 	function addListenerMulti(el, s, fn) {
 		s.split(' ').forEach(e => el.addEventListener(e, fn, true));
 	}
 	
+	/**
+	 * Remove Multiple Event Listners
+	 * @private
+	 * @param {DOMNode} element
+     * @param {String} selector
+     * @param {function} function
+	 */
+    
 	function removeListenerMulti(el, s, fn) {
 		s.split(' ').forEach(e => el.removeEventListener(e, fn, true));
 	}
 	
+	/**
+	 * Search through DOM for Parent with selector
+	 * @private
+	 * @param {DOMNode} element
+     * @param {String} selector
+	 */
+    
 	function findParent (el, sel) {
 		while ((el = el.parentElement) && !((el.matches || el.matchesSelector).call(el,sel)));
 		return el;
 	}
 	
+	/**
+	 * Animate Element
+	 * @private
+	 */
+    
 	var animate = function () {
-		//console.log(isInViewport(element));
 		if(!isInViewport(swipeableCards.element)){
+            
 			clearInterval(swipeableCards.interval);
 			swipeableCards.animating = false;
-			//console.log(swipeableCards.direction);
+            
             swipeableCards.pullDeltaX = 0;
             swipeableCards.pullDeltaY = 0;
+            
+            var removedElementParent = swipeableCards.element.parentNode;
+            var removedElement = swipeableCards.element.parentNode.removeChild(swipeableCards.element);
+            
 			settings[swipeableCards.direction+'Promise']().then(function() {
-				swipeableCards.element.parentNode.removeChild(swipeableCards.element);
+                
 			}).catch(function() {
+                swipeableCards.element = removedElementParent.appendChild(removedElement);
                 swipeableCards.element.style.transform = "";
                 swipeableCards.element.style.transition = ""; 
 
@@ -247,53 +293,69 @@
         }
 	}
 	
+	/**
+	 * Check wether the element is within Viewport
+	 * @private
+	 * @param {DOMNode} element
+	 */
+    
 	var isInViewport = function (elem) {
 		var bounding = elem.getBoundingClientRect();
-		//console.log(bounding);
+		return (
+            bounding.top >= 0 &&
+            bounding.left >= 0 &&
+            bounding.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            bounding.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+        /*
 		return (
 			Math.abs(swipeableCards.pullDeltaY) <= (window.innerHeight || document.documentElement.clientHeight) &&
 			Math.abs(swipeableCards.pullDeltaX) <= (window.innerWidth || document.documentElement.clientWidth)
 		);
+        */
 	};
 
 	/**
 	 * Destroy the current initialization.
 	 * @public
 	 */
+    
 	swipeableCards.destroy = function () {
 
-		// If plugin isn't already initialized, stop
 		if ( !settings ) return;
-
-		// Remove all added classes
+        
 		var links = document.querySelectorAll( '[data-swipeable]' );
 		for ( var i = 0, len = links.length; i < len; i++  ) {
 			links[i].classList.remove( links[i].getAttribute( 'data-swipeable' ) );
 		}
-
-		// Remove event listeners
+        
 		var el = document.querySelectorAll('[data-swipeable]')
 		for (var el of el) {
 			removeListenerMulti(el,'mousedown touchstart mouseup touchend', eventHandler);
 		}
 		//window.removeEventListener('resize', eventHandler, false);
 
-		// Reset variables
 		settings = null;
-
 	};
 
 	/**
-	 * SwipeRight
+	 * Method to initiate Right Swipe
 	 * @public
-	 * @param {Object} options User settings
+	 * @param {DOMNode} element
 	 */
+    
 	swipeableCards.swipeRight = function(element) {
         swipeableCards.element = element;
         swipeableCards.direction = "swipeRight"
         swipeableCards.pullDeltaX = 10;
         swipeableCards.interval = setInterval(animate, 1);
     };
+
+	/**
+	 * Method to initiate Left Swipe
+	 * @public
+	 * @param {DOMNode} element
+	 */
     
 	swipeableCards.swipeLeft = function(element) {
         swipeableCards.element = element;
@@ -307,31 +369,17 @@
 	 * @public
 	 * @param {Object} options User settings
 	 */
+    
 	swipeableCards.init = function ( options ) {
-
-		// feature test
+        
 		if ( !supports ) return;
 
-		// Destroy any existing initializations
 		swipeableCards.destroy();
-
-		// Merge user options with defaults
 		settings = extend( defaults, options || {} );
-
-		// Listen for click events
-		//var el = document.querySelectorAll('[data-swipeable]')
-		//for (var el of el) {
-			// mousemove touchmove mouseup touchend
-			addListenerMulti(document,'mousedown touchstart mouseup touchend', eventHandler);
-		//}
+        addListenerMulti(document,'mousedown touchstart mouseup touchend', eventHandler);
 		//window.addEventListener('resize', eventHandler, false);
         return swipeableCards;
 	};
-
-
-	//
-	// Public APIs
-	//
 
 	return swipeableCards;
 
