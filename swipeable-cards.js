@@ -55,31 +55,22 @@
 
 	};
 
-	/**
-	 * Add a class to a link when it's clicked
-	 * @private
-	 * @param {Event} event The click event
-	 */
-	var addClass = function ( event ) {
-
-		// Get the thing that was clicked
-		var toggle = event.target;
-
-		// Check if the thing that was clicked has the [data-click-me] attribute
-		if ( toggle && toggle.hasAttribute( 'data-swipeable' ) ) {
-			console.log("swipe")
-			// Prevent default click event
-			/*
-			if ( toggle.tagName.toLowerCase() === 'a') {
-				event.preventDefault();
-			}*/
-
-			// Set the [data-click-me] value as a class on the link
-			toggle.classList.add( toggle.getAttribute( 'data-swipeable' ) );
-
-		}
-
-	};
+    var addClass = function (element, classname) {
+        var cn = element.className;
+        //test for existance
+        if( cn.indexOf( classname ) != -1 ) {
+            return;
+        }
+        //add a space if the element already has class
+        if( cn != '' ) {
+            classname = ' '+classname;
+        }
+        element.className = cn+classname;
+    }
+    
+    var removeClass = function(e, c) {
+        e.className = e.className.replace(new RegExp('(?:^|s)' + c + '(?!S)'), '');
+    }
 
 	/**
 	 * Handle Events
@@ -87,10 +78,12 @@
      * @param {object} event
 	 */
     
-    var eventHandler = function (event) {
-        swipeableCards.element = findParent(event.target,'.swipeable');
+    var onGrab = function (event) {
+        if(event.target.classList.contains('swipeable'))
+            swipeableCards.element = event.target;
+        else 
+            swipeableCards.element = findParent(event.target,'.swipeable');
         if(event.target && swipeableCards.element) {
-            
             var ignore = false;
             if(settings.noSwipingClass) {
                 settings.noSwipingClass.split(' ').forEach(function(value, index) {
@@ -101,111 +94,131 @@
             }
             if(ignore) return
             
-            if ( event.type === 'touchstart' || event.type === 'mousedown' ) {
-                
-                if(swipeableCards.animating) return;
-                
-                swipeableCards.touchStartX = event.pageX || event.touches[0].pageX;
-                swipeableCards.touchStartY = event.pageY || event.touches[0].pageY;
-
-                addListenerMulti(event.target,"mousemove touchmove", elementMove);
-                
-            }
-            if ( event.type === 'touchend' || event.type === 'mouseup' ) {
-                swipeableCards.animating = false;
-                removeListenerMulti(event.target,"mousemove touchmove", elementMove);
-                if (!swipeableCards.pullDeltaX && !swipeableCards.pullDeltaY) return;
-                elementRelease();
-            }
+            if(swipeableCards.animating) return;
+            if(event.which && event.which != 1) return;
+            //console.log("grab")
+            
+            swipeableCards.touchStartX = event.pageX || event.touches[0].pageX;
+            swipeableCards.touchStartY = event.pageY || event.touches[0].pageY;
+            
+            addListenerMulti(event.target,"mousemove touchmove", onMove, {passive:false});
+            addListenerMulti(event.target,"mouseend touchend click", onRelease, {passive:false});
         }
     }
-	
+    
 	/**
 	 * Move Element
 	 * @private
      * @param {object} event
 	 */
     
-    var elementMove = function (event) {
+    var onMove = function (event) {
+        if(event.target.classList.contains('swipeable'))
+            swipeableCards.element = event.target;
+        else 
+            swipeableCards.element = findParent(event.target,'.swipeable');
+        
         var x = event.pageX || event.touches[0].pageX;
         var y = event.pageY || event.touches[0].pageY;
         swipeableCards.pullDeltaX = (x - swipeableCards.touchStartX);
         swipeableCards.pullDeltaY = (y - swipeableCards.touchStartY);
         
         if (!swipeableCards.pullDeltaX && !swipeableCards.pullDeltaY) return;
-        if((Math.abs(swipeableCards.pullDeltaX) < settings.threshold || Math.abs(swipeableCards.pullDeltaY) < settings.threshold) && !swipeableCards.animating) {
-            return
-        }
+        //console.log(Math.abs(swipeableCards.pullDeltaX))
+        //console.log(Math.abs(swipeableCards.pullDeltaY))
         
         swipeableCards.animating = true;
         
         var multiplier = Math.abs(Math.min(Math.max(Math.abs(swipeableCards.pullDeltaX) / (swipeableCards.element.offsetWidth / 1.5), 0), 1));
         if(swipeableCards.pullDeltaX >= 0) {
             swipeableCards.deg = 10*multiplier;
-            swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
-            swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
+            if(swipeableCards.element.querySelector('.swipeable-action.right'))
+                swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+            
+            if(swipeableCards.element.querySelector('.swipeable-action.left'))
+                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
         } else {
             swipeableCards.deg = -10*multiplier;
-            swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
-            swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
+            
+            if(swipeableCards.element.querySelector('.swipeable-action.left'))
+                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+            
+            if(swipeableCards.element.querySelector('.swipeable-action.right'))
+                swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
         }
         
         swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 1px) rotate("+swipeableCards.deg+"deg)";
-        swipeableCards.element.style.transitionDuration = "0";
+        swipeableCards.element.style.transitionDuration = "0s";
     }
-	
-	/**
-	 * Element was Released
+    
+    /**
+	 * Release Element
 	 * @private
      * @param {object} event
 	 */
     
-    var elementRelease = function (event) {
-
-        if (swipeableCards.pullDeltaX >= 100) {
-            swipeableCards.interval = setInterval(animate, 1);
-            swipeableCards.direction = "swipeRight"
-        } else if (swipeableCards.pullDeltaX <= -100) {
-            swipeableCards.interval = setInterval(animate, 1);
-            swipeableCards.direction = "swipeLeft"
-        } else if (swipeableCards.pullDeltaY >= 150) {
-            if(settings.swipeTop()) {
-                //TODO throw out
+    var onRelease = function (event) {
+        if(event.target.classList.contains('swipeable'))
+            swipeableCards.element = event.target;
+        else 
+            swipeableCards.element = findParent(event.target,'.swipeable');
+        
+        if(event.target && swipeableCards.element) {
+            removeListenerMulti(event.target,"mousemove touchmove", onMove);
+            removeListenerMulti(event.target,"mouseend touchend click", onRelease);
+            
+            if (!swipeableCards.animating) return;
+            if (!swipeableCards.pullDeltaX && !swipeableCards.pullDeltaY) return;
+            if((Math.abs(swipeableCards.pullDeltaX) < settings.threshold || Math.abs(swipeableCards.pullDeltaY) < settings.threshold) && !swipeableCards.animating) {
+                removeListenerMulti(event.target,"mousemove touchmove", onMove);
+                return
+            }
+            
+            if(event.type == "click") return;
+            swipeableCards.animating = false;
+            
+            event.preventDefault();
+            
+            if (swipeableCards.pullDeltaX >= 100) {
+                swipeableCards.interval = setInterval(animate, 1);
+                swipeableCards.direction = "swipeRight"
+            } else if (swipeableCards.pullDeltaX <= -100) {
+                swipeableCards.interval = setInterval(animate, 1);
+                swipeableCards.direction = "swipeLeft"
+            } else if (swipeableCards.pullDeltaY >= 150) {
+                if(settings.swipeTop()) {
+                    //TODO throw out
+                } else {
+                    swipeableCards.element.style.transform = "";
+                    swipeableCards.element.style.transitionDuration = "";
+                    var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                    for (var i = 0; i < actionElement.length; ++i) {
+                        actionElement[i].style.opacity = 0;
+                    }
+                }
+            } else if (swipeableCards.pullDeltaY <= -150) {
+                if(settings.swipeTop()) {
+                    //TODO throw out
+                } else {
+                    swipeableCards.element.style.transform = "";
+                    swipeableCards.element.style.transitionDuration = "";
+                    var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                    for (var i = 0; i < actionElement.length; ++i) {
+                        actionElement[i].style.opacity = 0;
+                    }
+                }
             } else {
-                swipeableCards.pullDeltaX = 0;
-                swipeableCards.pullDeltaY = 0;
                 swipeableCards.element.style.transform = "";
                 swipeableCards.element.style.transitionDuration = "";
                 var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
                 for (var i = 0; i < actionElement.length; ++i) {
                     actionElement[i].style.opacity = 0;
                 }
+                swipeableCards.element = null;
             }
-        } else if (swipeableCards.pullDeltaY <= -150) {
-            if(settings.swipeTop()) {
-                //TODO throw out
-            } else {
-                swipeableCards.pullDeltaX = 0;
-                swipeableCards.pullDeltaY = 0;
-                swipeableCards.element.style.transform = "";
-                swipeableCards.element.style.transitionDuration = "";
-                var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
-                for (var i = 0; i < actionElement.length; ++i) {
-                    actionElement[i].style.opacity = 0;
-                }
-            }
-        } else { 
-            swipeableCards.pullDeltaX = 0;
-            swipeableCards.pullDeltaY = 0;
-            //swipeableCards.element.style.transform = "translate3d(0px, 0px , 0) rotate(0deg)";
-            //swipeableCards.element.style.transition = "transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-            swipeableCards.element.style.transform = "";
-            swipeableCards.element.style.transitionDuration = "";
-            var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
-            for (var i = 0; i < actionElement.length; ++i) {
-                actionElement[i].style.opacity = 0;
-            }
-            swipeableCards.element = null;
+            
+            swipeableCards.pullDeltaX = null;
+            swipeableCards.pullDeltaY = null;
         }
     }
 	
@@ -217,8 +230,8 @@
      * @param {function} function
 	 */
     
-	function addListenerMulti(el, s, fn) {
-		s.split(' ').forEach(e => el.addEventListener(e, fn, true));
+	function addListenerMulti(el, s, fn, opt = {passive:true}) {
+		s.split(' ').forEach(e => el.addEventListener(e, fn, opt));
 	}
 	
 	/**
@@ -230,7 +243,7 @@
 	 */
     
 	function removeListenerMulti(el, s, fn) {
-		s.split(' ').forEach(e => el.removeEventListener(e, fn, true));
+		s.split(' ').forEach(e => el.removeEventListener(e, fn));
 	}
 	
 	/**
@@ -263,6 +276,7 @@
             var removedElement = swipeableCards.element.parentNode.removeChild(swipeableCards.element);
             
 			settings[swipeableCards.direction+'Promise']().then(function() {
+                //TODO: Call costum Function
                 
 			}).catch(function() {
                 swipeableCards.element = removedElementParent.appendChild(removedElement);
@@ -281,12 +295,16 @@
 			var multiplier = Math.abs(Math.min(Math.max(Math.abs(swipeableCards.pullDeltaX) / (swipeableCards.element.offsetWidth / 1.5), 0), 1));
             if(swipeableCards.pullDeltaX >= 0) {
                 swipeableCards.deg = 10*multiplier;
-                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
-                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
+                if(swipeableCards.element.querySelector('.swipeable-action.left')) {
+                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
+                }
             } else {
                 swipeableCards.deg = -10*multiplier;
-                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
-                swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
+                if(swipeableCards.element.querySelector('.swipeable-action.left')) {
+                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+                    swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
+                }
             }
             swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 0) rotate("+swipeableCards.deg+"deg)";
             swipeableCards.element.style.transitionDuration = "0";
@@ -376,7 +394,7 @@
 
 		swipeableCards.destroy();
 		settings = extend( defaults, options || {} );
-        addListenerMulti(document,'mousedown touchstart mouseup touchend', eventHandler);
+        addListenerMulti(document,'mousedown touchstart', onGrab, {passive:true});
 		//window.addEventListener('resize', eventHandler, false);
         return swipeableCards;
 	};
