@@ -14,22 +14,32 @@
 
 	// Default settings
 	var defaults = {
-		resizeLog: 'The window was resized!',
-		isHeld: false,
-        swiping: false,
+        cardboard: '',
         noSwipingClass: '',
-        threshold: 0.5,
+        addSwipingClass: '',
+        threshold: 1,
 		swipeRight: function (element, resolve, reject) { reject() },
 		swipeRightPromise: function() { return new Promise(function (resolve, reject) { settings.swipeRight(swipeableCards.element, resolve,reject)})},
 		swipeLeft: function (element, resolve, reject) { reject() },
 		swipeLeftPromise: function() { return new Promise(function (resolve, reject) { settings.swipeLeft(swipeableCards.element, resolve,reject)})},
 		swipeTop: function () { return false },
-		swipeBottom: function () { return false }
+		swipeBottom: function () { return false },
+        renderItem(item) {
+            return `
+                <li>
+                    <div class="item-content">
+                      <div class="item-inner">
+                        <div class="item-title">${item}</div>
+                      </div>
+                    </div>
+                </li>
+            `.trim();
+        },
 	};
 
-	//
-	// Methods
-	//
+	/**
+	 * Extend settings with params
+	 */
 	
 	var extend = function () {
 
@@ -54,6 +64,29 @@
 		return extended;
 
 	};
+    
+	
+	/**
+	 * Check wether the element is within Viewport
+	 * @private
+	 * @param {DOMNode} element
+	 */
+    
+	var isInViewport = function (el) {
+        var rect = el.getBoundingClientRect();
+
+        return rect.bottom > 0 &&
+            rect.right > 0 &&
+            rect.left < (window.innerWidth || document.documentElement.clientWidth) /* or $(window).width() */ &&
+            rect.top < (window.innerHeight || document.documentElement.clientHeight) /* or $(window).height() */;
+	};
+    
+	/**
+	 * Add specific CSS class to element
+	 * @private
+	 * @param {DOMNode} element
+     * @param {String} selector
+	 */
 
     var addClass = function (element, classname) {
         var cn = element.className;
@@ -68,157 +101,14 @@
         element.className = cn+classname;
     }
     
-    var removeClass = function(e, c) {
-        e.className = e.className.replace(new RegExp('(?:^|s)' + c + '(?!S)'), '');
-    }
-
-	/**
-	 * Handle Events
-	 * @private
-     * @param {object} event
-	 */
-    
-    var onGrab = function (event) {
-        if(event.target.classList.contains('swipeable'))
-            swipeableCards.element = event.target;
-        else 
-            swipeableCards.element = findParent(event.target,'.swipeable');
-        if(event.target && swipeableCards.element) {
-            var ignore = false;
-            if(settings.noSwipingClass) {
-                settings.noSwipingClass.split(' ').forEach(function(value, index) {
-                    if(swipeableCards.element.classList.contains(value)) {
-                        ignore = true;
-                    }
-                })
-            }
-            if(ignore) return
-            
-            if(swipeableCards.animating) return;
-            if(event.which && event.which != 1) return;
-            //console.log("grab")
-            
-            swipeableCards.touchStartX = event.pageX || event.touches[0].pageX;
-            swipeableCards.touchStartY = event.pageY || event.touches[0].pageY;
-            
-            addListenerMulti(event.target,"mousemove touchmove", onMove, {passive:false});
-            addListenerMulti(event.target,"mouseend touchend click", onRelease, {passive:false});
-        }
-    }
-    
-	/**
-	 * Move Element
-	 * @private
-     * @param {object} event
-	 */
-    
-    var onMove = function (event) {
-        if(event.target.classList.contains('swipeable'))
-            swipeableCards.element = event.target;
-        else 
-            swipeableCards.element = findParent(event.target,'.swipeable');
-        
-        var x = event.pageX || event.touches[0].pageX;
-        var y = event.pageY || event.touches[0].pageY;
-        swipeableCards.pullDeltaX = (x - swipeableCards.touchStartX);
-        swipeableCards.pullDeltaY = (y - swipeableCards.touchStartY);
-        
-        if (!swipeableCards.pullDeltaX && !swipeableCards.pullDeltaY) return;
-        //console.log(Math.abs(swipeableCards.pullDeltaX))
-        //console.log(Math.abs(swipeableCards.pullDeltaY))
-        
-        swipeableCards.animating = true;
-        
-        var multiplier = Math.abs(Math.min(Math.max(Math.abs(swipeableCards.pullDeltaX) / (swipeableCards.element.offsetWidth / 1.5), 0), 1));
-        if(swipeableCards.pullDeltaX >= 0) {
-            swipeableCards.deg = 10*multiplier;
-            if(swipeableCards.element.querySelector('.swipeable-action.right'))
-                swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
-            
-            if(swipeableCards.element.querySelector('.swipeable-action.left'))
-                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
-        } else {
-            swipeableCards.deg = -10*multiplier;
-            
-            if(swipeableCards.element.querySelector('.swipeable-action.left'))
-                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
-            
-            if(swipeableCards.element.querySelector('.swipeable-action.right'))
-                swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
-        }
-        
-        swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 1px) rotate("+swipeableCards.deg+"deg)";
-        swipeableCards.element.style.transitionDuration = "0s";
-    }
-    
-    /**
-	 * Release Element
-	 * @private
-     * @param {object} event
-	 */
-    
-    var onRelease = function (event) {
-        if(event.target.classList.contains('swipeable'))
-            swipeableCards.element = event.target;
-        else 
-            swipeableCards.element = findParent(event.target,'.swipeable');
-        
-        if(event.target && swipeableCards.element) {
-            removeListenerMulti(event.target,"mousemove touchmove", onMove);
-            removeListenerMulti(event.target,"mouseend touchend click", onRelease);
-            
-            if (!swipeableCards.animating) return;
-            if (!swipeableCards.pullDeltaX && !swipeableCards.pullDeltaY) return;
-            if((Math.abs(swipeableCards.pullDeltaX) < settings.threshold || Math.abs(swipeableCards.pullDeltaY) < settings.threshold) && !swipeableCards.animating) {
-                removeListenerMulti(event.target,"mousemove touchmove", onMove);
-                return
-            }
-            
-            if(event.type == "click") return;
-            swipeableCards.animating = false;
-            
-            event.preventDefault();
-            
-            if (swipeableCards.pullDeltaX >= 100) {
-                swipeableCards.interval = setInterval(animate, 1);
-                swipeableCards.direction = "swipeRight"
-            } else if (swipeableCards.pullDeltaX <= -100) {
-                swipeableCards.interval = setInterval(animate, 1);
-                swipeableCards.direction = "swipeLeft"
-            } else if (swipeableCards.pullDeltaY >= 150) {
-                if(settings.swipeTop()) {
-                    //TODO throw out
-                } else {
-                    swipeableCards.element.style.transform = "";
-                    swipeableCards.element.style.transitionDuration = "";
-                    var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
-                    for (var i = 0; i < actionElement.length; ++i) {
-                        actionElement[i].style.opacity = 0;
-                    }
+    var removeClass = function (element, classname) {
+        const classes = classname.split(' ');
+        if(classes.length > 0) {
+            for (var i = 0; i < classes.length; i++) {
+                if (element.classList.contains(classes[i])) {
+                    element.classList.remove(classes[i]);
                 }
-            } else if (swipeableCards.pullDeltaY <= -150) {
-                if(settings.swipeTop()) {
-                    //TODO throw out
-                } else {
-                    swipeableCards.element.style.transform = "";
-                    swipeableCards.element.style.transitionDuration = "";
-                    var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
-                    for (var i = 0; i < actionElement.length; ++i) {
-                        actionElement[i].style.opacity = 0;
-                    }
-                }
-            } else {
-                swipeableCards.element.style.transform = "";
-                swipeableCards.element.style.transitionDuration = "";
-                var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
-                for (var i = 0; i < actionElement.length; ++i) {
-                    actionElement[i].style.opacity = 0;
-                }
-                swipeableCards.element = null;
             }
-            
-            swipeableCards.pullDeltaX = null;
-            swipeableCards.pullDeltaY = null;
         }
     }
 	
@@ -257,6 +147,171 @@
 		while ((el = el.parentElement) && !((el.matches || el.matchesSelector).call(el,sel)));
 		return el;
 	}
+    
+    function selectorMatches(el, selector) {
+        var p = Element.prototype;
+        var f = p.matches || p.webkitMatchesSelector || p.mozMatchesSelector || p.msMatchesSelector || function(s) {
+            return [].indexOf.call(document.querySelectorAll(s), this) !== -1;
+        };
+        return f.call(el, selector);
+    }
+
+	/**
+	 * Handle Events
+	 * @private
+     * @param {object} event
+	 */
+    
+    var onGrab = function (event) {
+        //console.log("grab")
+        if(event.target.matches('.swipeable'))
+            swipeableCards.element = event.target;
+        else 
+            swipeableCards.element = findParent(event.target,'.swipeable');
+        if(swipeableCards.element) {
+            //swipeableCards.element = event.target;
+            if (settings.noSwipingClass.split(' ').some(className => swipeableCards.element.classList.contains(className))) {
+                return
+            }
+            if(swipeableCards.element.matches(settings.noSwipingClass))
+                return
+            
+            if(swipeableCards.animating) return;
+            if(event.which && event.which != 1) return;
+            //console.log("onGrab:" + event.type)
+            
+            swipeableCards.touchStartX = event.pageX || event.touches[0].pageX;
+            swipeableCards.touchStartY = event.pageY || event.touches[0].pageY;
+            
+            addListenerMulti(swipeableCards.element,"mousemove touchmove", onMove, {passive:false});
+            addListenerMulti(swipeableCards.element,"mouseup touchend touchcancel click", onRelease, {passive:false});
+        }
+    }
+    
+	/**
+	 * Move Element
+	 * @private
+     * @param {object} event
+	 */
+    
+    var onMove = function (event) {
+        if(event.target.matches('.swipeable'))
+            swipeableCards.element = event.target;
+        else 
+            swipeableCards.element = findParent(event.target,'.swipeable');
+        
+        
+        var x = event.pageX || event.touches[0].pageX;
+        var y = event.pageY || event.touches[0].pageY;
+        swipeableCards.pullDeltaX = (x - swipeableCards.touchStartX);
+        swipeableCards.pullDeltaY = (y - swipeableCards.touchStartY);
+        if (!swipeableCards.pullDeltaX && !swipeableCards.pullDeltaY) return; 
+        if(Math.abs(swipeableCards.pullDeltaX) <= settings.threshold) return;
+        addClass(swipeableCards.element, settings.addSwipingClass);
+        
+        swipeableCards.animating = true;
+        
+        var multiplier = Math.abs(Math.min(Math.max(Math.abs(swipeableCards.pullDeltaX) / (swipeableCards.element.offsetWidth / 1.5), 0), 1));
+        if(swipeableCards.pullDeltaX >= 0) {
+            swipeableCards.deg = 10*multiplier;
+            if(swipeableCards.element.querySelector('.swipeable-action.right'))
+                swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+            
+            if(swipeableCards.element.querySelector('.swipeable-action.left'))
+                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
+        } else {
+            swipeableCards.deg = -10*multiplier;
+            
+            if(swipeableCards.element.querySelector('.swipeable-action.left'))
+                swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+            
+            if(swipeableCards.element.querySelector('.swipeable-action.right'))
+                swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
+        }
+        
+        swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 1000px) rotate("+swipeableCards.deg+"deg)";
+        swipeableCards.element.style.transitionTimingFunction = "ease";
+        swipeableCards.element.style.transitionDuration = "0s";
+    }
+    
+    /**
+	 * Release Element
+	 * @private
+     * @param {object} event
+	 */
+    
+    var onRelease = function (event) {
+        //console.log("onRelease:" + event.type)
+        if(event.type == 'click') {
+            if(swipeableCards.animating) {
+                event.stopPropagation();
+                return
+            }
+        }
+        if(event.target.matches('.swipeable'))
+            swipeableCards.element = event.target;
+        else 
+            swipeableCards.element = findParent(event.target,'.swipeable');
+        
+        if(event.target && swipeableCards.element) {
+            removeListenerMulti(event.target,"mousemove touchmove", onMove);
+            removeListenerMulti(event.target,"mouseend touchend touchcancel", onRelease);
+            
+            if (!swipeableCards.animating) return;
+            if (!swipeableCards.pullDeltaX && !swipeableCards.pullDeltaY) return;
+            if((Math.abs(swipeableCards.pullDeltaX) < settings.threshold || Math.abs(swipeableCards.pullDeltaY) < settings.threshold) && !swipeableCards.animating) {
+                removeListenerMulti(event.target,"mousemove touchmove", onMove);
+                return
+            }
+            
+            if(event.type == "click") return;
+            swipeableCards.animating = false;
+            
+            event.preventDefault();
+            if (swipeableCards.pullDeltaX >= 100) {
+                swipeableCards.direction = "swipeRight"
+                swipeableCards.interval = setInterval(animate, 1);
+            } else if (swipeableCards.pullDeltaX <= -100) {
+                swipeableCards.direction = "swipeLeft"
+                console.log(swipeableCards)
+                swipeableCards.interval = setInterval(animate, 1);
+            } else if (swipeableCards.pullDeltaY >= 150) {
+                swipeableCards.element.style.transform = "";
+                swipeableCards.element.style.transitionDuration = "";
+                var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                for (var i = 0; i < actionElement.length; ++i) {
+                    actionElement[i].style.opacity = 0;
+                }
+            } else if (swipeableCards.pullDeltaY <= -150) {
+                swipeableCards.element.style.transform = "";
+                swipeableCards.element.style.transitionDuration = "";
+                var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                for (var i = 0; i < actionElement.length; ++i) {
+                    actionElement[i].style.opacity = 0;
+                }
+            } else {
+                swipeableCards.element.style.transform = "";
+                swipeableCards.element.style.transitionDuration = "";
+                var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                for (var i = 0; i < actionElement.length; ++i) {
+                    actionElement[i].style.opacity = 0;
+                }
+                //setTimeout(removeClass(swipeableCards.element, settings.addSwipingClass), 3000)
+                async function f(el,t) {
+                    let promise = new Promise((resolve, reject) => {
+                        setTimeout(() => resolve(removeClass(el, settings.addSwipingClass)), t)
+                    });
+                    let result = await promise; // wait until the promise resolves (*)
+                    //removeClass(swipeableCards.element, settings.addSwipingClass)
+                }
+                f(swipeableCards.element,500);
+                swipeableCards.element = null;
+            }
+            
+            //swipeableCards.pullDeltaX = null;
+            //swipeableCards.pullDeltaY = null;
+        }
+    }
 	
 	/**
 	 * Animate Element
@@ -265,7 +320,6 @@
     
 	var animate = function () {
 		if(!isInViewport(swipeableCards.element)){
-            
 			clearInterval(swipeableCards.interval);
 			swipeableCards.animating = false;
             
@@ -279,14 +333,23 @@
                 //TODO: Call costum Function
                 
 			}).catch(function() {
-                swipeableCards.element = removedElementParent.appendChild(removedElement);
-                swipeableCards.element.style.transform = "";
-                swipeableCards.element.style.transition = ""; 
+                swipeableCards.element = removedElementParent.prepend(removedElement);
+                removedElement.style.transform = "";
+                removedElement.style.transition = ""; 
 
-                var actionElement = swipeableCards.element.querySelectorAll('.swipeable-action')
+                var actionElement = removedElement.querySelectorAll('.swipeable-action')
                 for (var i = 0; i < actionElement.length; ++i) {
                     actionElement[i].style.opacity = 0;
                 }
+                async function f(el,t) {
+                    let promise = new Promise((resolve, reject) => {
+                        setTimeout(() => resolve(removeClass(el, settings.addSwipingClass)), t)
+                    });
+                    let result = await promise; // wait until the promise resolves (*)
+                    //removeClass(swipeableCards.element, settings.addSwipingClass)
+                }
+                f(removedElement,500);
+                swipeableCards.element = null;
 			});
 		} else {
 			swipeableCards.animating = true;
@@ -296,42 +359,20 @@
             if(swipeableCards.pullDeltaX >= 0) {
                 swipeableCards.deg = 10*multiplier;
                 if(swipeableCards.element.querySelector('.swipeable-action.left')) {
-                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+                    swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 1;
                     swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 0;
                 }
             } else {
                 swipeableCards.deg = -10*multiplier;
                 if(swipeableCards.element.querySelector('.swipeable-action.left')) {
-                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = Math.abs(swipeableCards.pullDeltaX)/100;
+                    swipeableCards.element.querySelector('.swipeable-action.left').style.opacity = 1;
                     swipeableCards.element.querySelector('.swipeable-action.right').style.opacity = 0;
                 }
             }
             swipeableCards.element.style.transform = "translate3d("+ swipeableCards.pullDeltaX +"px, "+ swipeableCards.pullDeltaY +"px , 0) rotate("+swipeableCards.deg+"deg)";
-            swipeableCards.element.style.transitionDuration = "0";
+            swipeableCards.element.style.transitionDuration = "0s";
         }
 	}
-	
-	/**
-	 * Check wether the element is within Viewport
-	 * @private
-	 * @param {DOMNode} element
-	 */
-    
-	var isInViewport = function (elem) {
-		var bounding = elem.getBoundingClientRect();
-		return (
-            bounding.top >= 0 &&
-            bounding.left >= 0 &&
-            bounding.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-            bounding.right <= (window.innerWidth || document.documentElement.clientWidth)
-        );
-        /*
-		return (
-			Math.abs(swipeableCards.pullDeltaY) <= (window.innerHeight || document.documentElement.clientHeight) &&
-			Math.abs(swipeableCards.pullDeltaX) <= (window.innerWidth || document.documentElement.clientWidth)
-		);
-        */
-	};
 
 	/**
 	 * Destroy the current initialization.
@@ -347,10 +388,11 @@
 			links[i].classList.remove( links[i].getAttribute( 'data-swipeable' ) );
 		}
         
-		var el = document.querySelectorAll('[data-swipeable]')
-		for (var el of el) {
-			removeListenerMulti(el,'mousedown touchstart mouseup touchend', eventHandler);
-		}
+		//var el = document.querySelectorAll('[data-swipeable]')
+		//for (var el of el) {
+		//	removeListenerMulti(document,'mousedown touchstart mouseup touchend', eventHandler);
+		//}
+        removeListenerMulti(document,'mousedown mouseup touchstart touchend touchcancel', onGrab);
 		//window.removeEventListener('resize', eventHandler, false);
 
 		settings = null;
@@ -365,7 +407,8 @@
 	swipeableCards.swipeRight = function(element) {
         swipeableCards.element = element;
         swipeableCards.direction = "swipeRight"
-        swipeableCards.pullDeltaX = 10;
+        swipeableCards.pullDeltaX = 0.5;
+        swipeableCards.pullDeltaY = 0;
         swipeableCards.interval = setInterval(animate, 1);
     };
 
@@ -378,8 +421,19 @@
 	swipeableCards.swipeLeft = function(element) {
         swipeableCards.element = element;
         swipeableCards.direction = "swipeLeft"
-        swipeableCards.pullDeltaX = -10;
+        swipeableCards.pullDeltaX = -0.5;
+        swipeableCards.pullDeltaY = 0;
         swipeableCards.interval = setInterval(animate, 1);
+    };
+    
+	/**
+	 * Method to initiate Left Swipe
+	 * @public
+	 * @param {DOMNode} element
+	 */
+    
+	swipeableCards.update = function() {
+        console.log(swipeableCards)
     };
     
 	/**
